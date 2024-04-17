@@ -66,10 +66,28 @@ window.addEventListener("load", function () {
       this.game = game;
       this.collisionX = Math.random() * this.game.width; //randomize horizontal placement of obstacles
       this.collisionY = Math.random() * this.game.height; //randomize vertical placement of obstacles
-      this.collisionRadius = 100; //hitbox radius
+      this.collisionRadius = 60; //hitbox radius
+      this.image = document.getElementById("obstacles"); // get access to sprite sheet for obstacles from HTML
+      this.spriteHeight = 250;
+      this.spriteWidth = 250;
+      this.width = this.spriteWidth;
+      this.height = this.spriteHeight;
+      this.spriteX = this.collisionX - this.width * 0.5;
+      this.spriteY = this.collisionY - this.height * 0.5 - 70;
     }
 
     draw(context) {
+      context.drawImage(
+        this.image,
+        0,
+        0,
+        this.spriteWidth,
+        this.spriteHeight,
+        this.spriteX,
+        this.spriteY,
+        this.width,
+        this.height
+      ); //load sprite from sprite sheet
       context.beginPath();
       context.arc(
         this.collisionX,
@@ -92,7 +110,7 @@ window.addEventListener("load", function () {
       this.width = this.canvas.width;
       this.height = this.canvas.height;
       this.player = new Player(this);
-      this.numberOfObstacles = 5;
+      this.numberOfObstacles = 10;
       this.obstacles = [];
       this.mouse = {
         x: this.width * 0.5,
@@ -130,8 +148,33 @@ window.addEventListener("load", function () {
     }
 
     init() {
-      for (let i = 0; i < this.numberOfObstacles; i++) {
-        this.obstacles.push(new Obstacle(this));
+      // load randomly placed obstacles, use circle packing algo to ensure they don't overlap with each other
+      let attempts = 0; //so we don't start infinite loop
+      // while array of game obstacles has a length less than the amount of specified obstacles, and while number of attempts is less than 500, perform circle packing
+      while (this.obstacles.length < this.numberOfObstacles && attempts < 500) {
+        let testObstacle = new Obstacle(this); // test obstacle to compare against game obstacles
+        let overlap = false; // variable to track outcome of circle packing algo
+        this.obstacles.forEach((obstacle) => {
+          // circle pack woooooo!
+          //track values of distance between the x/y coords of current obstacle in Game object and test obstacle hitboxes
+          let distanceX = testObstacle.collisionX - obstacle.collisionX;
+          let distanceY = testObstacle.collisionY - obstacle.collisionY;
+          // get actual distance using pythagorean theorem
+          let distance = Math.hypot(distanceY, distanceX);
+          // store sum of radii for comparison
+          let sumOfRadii =
+            testObstacle.collisionRadius + obstacle.collisionRadius;
+          // check if actual distance between obstacles is less than sum of radii
+          if (distance < sumOfRadii) {
+            // hitboxes overlap if distance is less than sum of radii, set overlap to true
+            overlap = true;
+          }
+        });
+        // after checking every obstacle, if overlap is false, we can add current testObstacle to our Game object
+        if (!overlap) {
+          this.obstacles.push(testObstacle);
+        }
+        attempts++;
       }
     }
   }
