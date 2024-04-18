@@ -74,13 +74,15 @@ window.addEventListener("load", function () {
       this.height = this.spriteHeight;
       this.spriteX = this.collisionX - this.width * 0.5;
       this.spriteY = this.collisionY - this.height * 0.5 - 70;
+      this.frameX = Math.floor(Math.random() * 4);
+      this.frameY = Math.floor(Math.random() * 3);
     }
 
     draw(context) {
       context.drawImage(
         this.image,
-        0,
-        0,
+        this.frameX * this.spriteWidth,
+        this.frameY * this.spriteHeight,
         this.spriteWidth,
         this.spriteHeight,
         this.spriteX,
@@ -112,6 +114,7 @@ window.addEventListener("load", function () {
       this.player = new Player(this);
       this.numberOfObstacles = 10;
       this.obstacles = [];
+      this.topMargin = 260;
       this.mouse = {
         x: this.width * 0.5,
         y: this.height * 0.5,
@@ -153,25 +156,52 @@ window.addEventListener("load", function () {
       // while array of game obstacles has a length less than the amount of specified obstacles, and while number of attempts is less than 500, perform circle packing
       while (this.obstacles.length < this.numberOfObstacles && attempts < 500) {
         let testObstacle = new Obstacle(this); // test obstacle to compare against game obstacles
-        let overlap = false; // variable to track outcome of circle packing algo
+        let overlapObstacle = false; // variable to track state of obstacles overlapping with each other
         this.obstacles.forEach((obstacle) => {
           // circle pack woooooo!
           //track values of distance between the x/y coords of current obstacle in Game object and test obstacle hitboxes
           let distanceX = testObstacle.collisionX - obstacle.collisionX;
           let distanceY = testObstacle.collisionY - obstacle.collisionY;
+          const bufferSpace = 100; // buffer zone between obstacles to allow players and enemies to easily maneuver around obstacles
           // get actual distance using pythagorean theorem
           let distance = Math.hypot(distanceY, distanceX);
           // store sum of radii for comparison
           let sumOfRadii =
-            testObstacle.collisionRadius + obstacle.collisionRadius;
+            testObstacle.collisionRadius +
+            obstacle.collisionRadius +
+            bufferSpace;
           // check if actual distance between obstacles is less than sum of radii
           if (distance < sumOfRadii) {
             // hitboxes overlap if distance is less than sum of radii, set overlap to true
-            overlap = true;
+            overlapObstacle = true;
           }
         });
         // after checking every obstacle, if overlap is false, we can add current testObstacle to our Game object
-        if (!overlap) {
+        let overlapLeftScreen = false; // store state of test obstacle overlapping the left side of the game screen, we want them to be fully in view
+        if (testObstacle.spriteX < 0) {
+          overlapLeftScreen = true;
+        }
+        let overlapRightScreen = false; // store state of test obstacle overlapping right side of game screen
+        if (testObstacle.spriteX > this.width - testObstacle.width) {
+          overlapRightScreen = true;
+        }
+        const margin = testObstacle.collisionRadius * 2; // add some margin so obstacles appear on game path
+        let overlapTopScreen = false; // store state of test obstacle overlapping with top of screen, including desired game margin
+        if (testObstacle.collisionY < this.topMargin + margin) {
+          overlapTopScreen = true;
+        }
+        let overlapBottomScreen = false; // store state of test obstacle overlapping with bottom of screen
+        if (testObstacle.collisionY > this.height - margin) {
+          overlapBottomScreen = true;
+        }
+        if (
+          !overlapObstacle &&
+          !overlapLeftScreen &&
+          !overlapRightScreen &&
+          !overlapTopScreen &&
+          !overlapBottomScreen
+        ) {
+          //if test obstacle doesn't overlap with any edges of the game screen and doesn't overlap another obstacle, add it to the game
           this.obstacles.push(testObstacle);
         }
         attempts++;
